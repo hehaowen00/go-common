@@ -1,4 +1,4 @@
-package arraymap
+package common
 
 import (
 	"cmp"
