@@ -12,7 +12,7 @@ type Queue[T any] struct {
 }
 
 type node[T any] struct {
-	data *T
+	data T
 	next *node[T]
 }
 
@@ -35,7 +35,7 @@ func (q *Queue[T]) Enqueue(item T) {
 		n = new(node[T])
 	}
 
-	n.data = &item
+	n.data = item
 
 	if q.len == 0 {
 		q.head = n
@@ -48,16 +48,17 @@ func (q *Queue[T]) Enqueue(item T) {
 	q.len++
 }
 
-func (q *Queue[T]) Dequeue() Option[T] {
+func (q *Queue[T]) Dequeue() (T, bool) {
+	var tmp T
 	if q.len == 0 {
-		return None[T]()
+		return tmp, false
 	}
 
 	n := q.head
 	item := n.data
 	q.head = q.head.next
 
-	n.data = nil
+	n.data = tmp
 	n.next = nil
 
 	q.len--
@@ -72,5 +73,5 @@ func (q *Queue[T]) Dequeue() Option[T] {
 
 	q.free++
 
-	return Some(*item)
+	return item, true
 }

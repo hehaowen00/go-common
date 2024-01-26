@@ -12,16 +12,15 @@ func TestQueue1(t *testing.T) {
 	}
 
 	if queue.Len() != 10 {
-		t.Fail()
+		t.FailNow()
 	}
 
 	for i := 0; i < 10; i++ {
-		v := queue.Dequeue()
-
-		if v.Ok() {
-			if v.Unwrap() != i {
-				t.Fail()
-			}
+		v, ok := queue.Dequeue()
+		if !ok {
+			t.FailNow()
+		} else if v != i {
+			t.FailNow()
 		}
 	}
 
@@ -30,7 +29,7 @@ func TestQueue1(t *testing.T) {
 	}
 
 	if queue.Len() != 10 {
-		t.Fail()
+		t.FailNow()
 	}
 }
 

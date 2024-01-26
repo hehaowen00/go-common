@@ -25,7 +25,7 @@ func (r *Ring[T]) Push(item T) {
 	}
 
 	r.data[r.tail] = item
-	r.tail = r.tail + 1
+	r.tail++
 
 	if r.tail == len(r.data) {
 		r.tail = r.tail % len(r.data)
@@ -56,7 +56,7 @@ func (r *Ring[T]) resize(cap int) {
 	for i := 0; i < r.len; i++ {
 		start := (r.head + i) % len(r.data)
 		newData[count] = r.data[start]
-		count = count + 1
+		count++
 	}
 
 	r.head = 0
