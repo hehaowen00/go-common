@@ -1,10 +1,12 @@
 package common
 
-import "sync"
+import (
+	"sync"
+)
 
 type Bus[T any] struct {
 	mu          sync.Mutex
-	data        []T
+	buf         *Ring[T]
 	counter     int
 	close       chan struct{}
 	subscribers map[int]chan struct{}
@@ -12,6 +14,7 @@ type Bus[T any] struct {
 
 func NewBus[T any]() *Bus[T] {
 	return &Bus[T]{
+		buf:         NewRing[T](),
 		close:       make(chan struct{}),
 		subscribers: make(map[int]chan struct{}),
 	}
@@ -48,7 +51,7 @@ func (b *Bus[T]) Subscribe() *Subscriber[T] {
 	defer b.mu.Unlock()
 
 	notify := make(chan struct{}, 1)
-	if len(b.data) > 0 {
+	if b.buf.Len() > 0 {
 		notify <- struct{}{}
 	}
 
@@ -71,7 +74,7 @@ func (b *Bus[T]) Push(msg T) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	b.data = append(b.data, msg)
+	b.buf.Push(msg)
 
 	wg := sync.WaitGroup{}
 
@@ -92,21 +95,16 @@ func (b *Bus[T]) Pop() (T, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if len(b.data) == 0 {
-		return *new(T), false
-	}
-
-	msg := b.data[0]
-	b.data = b.data[1:]
-
-	return msg, true
+	return b.buf.Pop()
 }
 
 func (b *Bus[T]) Enqueue(data []T) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	b.data = append(b.data, data...)
+	for _, v := range data {
+		b.buf.Push(v)
+	}
 
 	wg := sync.WaitGroup{}
 
@@ -128,12 +126,13 @@ func (b *Bus[T]) Dequeue() ([]T, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if len(b.data) == 0 {
-		return nil, false
+	var data []T
+
+	msg, ok := b.buf.Pop()
+	for ok {
+		data = append(data, msg)
+		msg, ok = b.buf.Pop()
 	}
 
-	msg := b.data
-	b.data = nil
-
-	return msg, true
+	return data, len(data) > 0
 }
