@@ -76,19 +76,11 @@ func (b *Bus[T]) Push(msg T) {
 
 	b.buf.Push(msg)
 
-	wg := sync.WaitGroup{}
-
 	for _, sub := range b.subscribers {
-		wg.Add(1)
-		go func(sub chan struct{}) {
-			if len(sub) == 0 {
-				sub <- struct{}{}
-			}
-			wg.Done()
-		}(sub)
+		if len(sub) == 0 {
+			sub <- struct{}{}
+		}
 	}
-
-	wg.Wait()
 }
 
 func (b *Bus[T]) Pop() (T, bool) {
@@ -106,20 +98,11 @@ func (b *Bus[T]) Enqueue(data []T) {
 		b.buf.Push(v)
 	}
 
-	wg := sync.WaitGroup{}
-
 	for _, sub := range b.subscribers {
-		wg.Add(1)
-
-		go func(sub chan struct{}) {
-			if len(sub) == 0 {
-				sub <- struct{}{}
-			}
-			wg.Done()
-		}(sub)
+		if len(sub) == 0 {
+			sub <- struct{}{}
+		}
 	}
-
-	wg.Wait()
 }
 
 func (b *Bus[T]) Dequeue() ([]T, bool) {
