@@ -26,12 +26,16 @@ type Subscriber[T any] struct {
 	Notify chan struct{}
 }
 
-func (s *Subscriber[T]) Close() {
-	s.bus.Unsubscribe(s.id)
-}
-
 func (s *Subscriber[T]) Closed() <-chan struct{} {
 	return s.bus.close
+}
+
+func (s *Subscriber[T]) Unsubscribe() {
+	s.bus.mu.Lock()
+	defer s.bus.mu.Unlock()
+
+	close(s.bus.subscribers[s.id])
+	delete(s.bus.subscribers, s.id)
 }
 
 func (b *Bus[T]) Close() {
@@ -60,14 +64,6 @@ func (b *Bus[T]) Subscribe() *Subscriber[T] {
 	b.counter++
 
 	return &Subscriber[T]{b, id, notify}
-}
-
-func (b *Bus[T]) Unsubscribe(id int) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	close(b.subscribers[id])
-	delete(b.subscribers, id)
 }
 
 func (b *Bus[T]) Push(msg T) {
