@@ -1,4 +1,4 @@
-package common
+package channel
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func TestBus1(t *testing.T) {
-	bus := NewBus[int]()
+func TestChannel1(t *testing.T) {
+	channel := NewChannel[int]()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -20,27 +20,24 @@ func TestBus1(t *testing.T) {
 				wg.Done()
 				return
 			case <-s.Notify():
-				m, ok := s.Dequeue()
-				if ok {
-					for _, v := range m {
-						fmt.Println("recv", v)
-					}
+				for _, v := range s.Dequeue() {
+					fmt.Println("recv", v)
 				}
 				time.Sleep(1 * time.Second)
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	bus.Enqueue(data)
+	channel.Enqueue(data)
 
 	time.Sleep(time.Second)
-	bus.Close()
+	channel.Close()
 	wg.Wait()
 }
 
-func TestBus2(t *testing.T) {
-	bus := NewBus[int]()
+func TestChannel2(t *testing.T) {
+	channel := NewChannel[int]()
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -60,7 +57,7 @@ func TestBus2(t *testing.T) {
 				}
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	go func(s *Subscriber[int]) {
 		for {
@@ -77,19 +74,19 @@ func TestBus2(t *testing.T) {
 				}
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	for i := 0; i < 10; i++ {
-		bus.Push(i)
+		channel.Push(i)
 	}
 
 	time.Sleep(6 * time.Second)
-	bus.Close()
+	channel.Close()
 	wg.Wait()
 }
 
-func TestBus3(t *testing.T) {
-	bus := NewBus[int]()
+func TestChannel3(t *testing.T) {
+	channel := NewChannel[int]()
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -109,7 +106,7 @@ func TestBus3(t *testing.T) {
 				}
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	go func(s *Subscriber[int]) {
 		for {
@@ -126,21 +123,21 @@ func TestBus3(t *testing.T) {
 				}
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	bus.Enqueue(data)
+	channel.Enqueue(data)
 
 	time.Sleep(2 * time.Second)
-	bus.Close()
+	channel.Close()
 	wg.Wait()
 }
 
-func TestBus4(t *testing.T) {
-	bus := NewBus[int]()
+func TestChannel4(t *testing.T) {
+	channel := NewChannel[int]()
 
 	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	bus.Enqueue(data)
+	channel.Enqueue(data)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -152,38 +149,35 @@ func TestBus4(t *testing.T) {
 				wg.Done()
 				return
 			case <-s.Notify():
-				m, ok := s.Dequeue()
-				if ok {
-					for _, v := range m {
-						fmt.Println("recv", v)
-					}
+				for _, v := range s.Dequeue() {
+					fmt.Println("recv", v)
 				}
 				time.Sleep(1 * time.Second)
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	time.Sleep(time.Second)
-	bus.Close()
+	channel.Close()
 	wg.Wait()
 }
 
-func TestBus5(t *testing.T) {
-	bus := NewBus[int]()
+func TestChannel5(t *testing.T) {
+	channel := NewChannel[int]()
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
 	go func() {
 		for i := 0; i < 5; i++ {
-			bus.Push(i)
+			channel.Push(i)
 		}
 		wg.Done()
 	}()
 
 	go func() {
 		for i := 5; i < 10; i++ {
-			bus.Push(i)
+			channel.Push(i)
 		}
 		wg.Done()
 	}()
@@ -195,17 +189,14 @@ func TestBus5(t *testing.T) {
 				wg.Done()
 				return
 			case <-s.Notify():
-				m, ok := s.Dequeue()
-				if ok {
-					for _, v := range m {
-						fmt.Println("recv", v)
-					}
+				for _, v := range s.Dequeue() {
+					fmt.Println("recv", v)
 				}
 			}
 		}
-	}(bus.Subscribe())
+	}(channel.Subscribe())
 
 	time.Sleep(2 * time.Second)
-	bus.Close()
+	channel.Close()
 	wg.Wait()
 }

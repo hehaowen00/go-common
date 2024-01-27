@@ -1,4 +1,4 @@
-package common
+package ring
 
 type Ring[T any] struct {
 	data []T

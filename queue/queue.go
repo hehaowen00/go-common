@@ -1,4 +1,4 @@
-package common
+package queue
 
 type Queue[T any] struct {
 	head *node[T]

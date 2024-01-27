@@ -1,4 +1,4 @@
-package common
+package option
 
 type Option[T any] struct {
 	internal T
