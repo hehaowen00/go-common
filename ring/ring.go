@@ -56,6 +56,24 @@ func (r *Ring[T]) Pop() (T, bool) {
 	return res, true
 }
 
+func (r *Ring[T]) Dequeue() []T {
+	var data []T
+
+	start := r.head
+
+	for i := 0; i < r.len; i++ {
+		item := r.data[start+i%len(r.data)]
+		data = append(data, item)
+	}
+
+	r.head = 0
+	r.tail = 0
+	r.len = 0
+	clear(r.data)
+
+	return data
+}
+
 func (r *Ring[T]) resize(cap int) {
 	newData := make([]T, cap)
 	count := 0

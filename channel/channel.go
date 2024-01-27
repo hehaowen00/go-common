@@ -98,15 +98,7 @@ func (c *Channel[T]) dequeue() []T {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var data []T
-
-	msg, ok := c.buf.Pop()
-	for ok {
-		data = append(data, msg)
-		msg, ok = c.buf.Pop()
-	}
-
-	return data
+	return c.buf.Dequeue()
 }
 
 type Subscriber[T any] struct {
