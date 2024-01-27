@@ -60,6 +60,7 @@ func (b *Bus[T]) Close() {
 			delete(b.subscribers, id)
 		}
 
+		b.buf.Clear()
 		close(b.close)
 	})
 }

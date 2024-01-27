@@ -19,6 +19,13 @@ func (r *Ring[T]) Len() int {
 	return len(r.data)
 }
 
+func (r *Ring[T]) Clear() {
+	clear(r.data)
+	r.head = 0
+	r.tail = 0
+	r.len = 0
+}
+
 func (r *Ring[T]) Push(item T) {
 	if r.len > 0 && r.tail == r.head {
 		r.resize(r.cap * 2)
