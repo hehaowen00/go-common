@@ -59,11 +59,15 @@ func (r *Ring[T]) Pop() (T, bool) {
 func (r *Ring[T]) Dequeue() []T {
 	var data []T
 
-	start := r.head
+	if r.len == 0 {
+		return nil
+	}
 
-	for i := 0; i < r.len; i++ {
-		item := r.data[start+i%len(r.data)]
-		data = append(data, item)
+	if r.head < r.tail {
+		data = append(data, r.data[r.head:r.tail]...)
+	} else {
+		data = append(data, r.data[r.head:r.cap]...)
+		data = append(data, r.data[0:r.tail]...)
 	}
 
 	r.head = 0
