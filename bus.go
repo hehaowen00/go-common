@@ -5,11 +5,13 @@ import (
 )
 
 type Bus[T any] struct {
-	mu          sync.Mutex
 	buf         *Ring[T]
 	counter     int
 	close       chan struct{}
 	subscribers map[int]chan struct{}
+
+	mu   sync.Mutex
+	once sync.Once
 }
 
 func NewBus[T any]() *Bus[T] {
@@ -23,31 +25,51 @@ func NewBus[T any]() *Bus[T] {
 type Subscriber[T any] struct {
 	bus    *Bus[T]
 	id     int
-	Notify chan struct{}
+	notify chan struct{}
+	once   sync.Once
 }
 
 func (s *Subscriber[T]) Closed() <-chan struct{} {
 	return s.bus.close
 }
 
-func (s *Subscriber[T]) Unsubscribe() {
-	s.bus.mu.Lock()
-	defer s.bus.mu.Unlock()
+func (s *Subscriber[T]) Notify() <-chan struct{} {
+	return s.notify
+}
 
-	close(s.bus.subscribers[s.id])
-	delete(s.bus.subscribers, s.id)
+func (s *Subscriber[T]) Unsubscribe() {
+	s.once.Do(func() {
+		s.bus.mu.Lock()
+		defer s.bus.mu.Unlock()
+
+		close(s.bus.subscribers[s.id])
+		delete(s.bus.subscribers, s.id)
+
+		s.bus = nil
+		s.notify = nil
+	})
 }
 
 func (b *Bus[T]) Close() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.once.Do(func() {
+		b.mu.Lock()
+		defer b.mu.Unlock()
 
-	for id, sub := range b.subscribers {
-		close(sub)
-		delete(b.subscribers, id)
-	}
+		for id, sub := range b.subscribers {
+			close(sub)
+			delete(b.subscribers, id)
+		}
 
-	close(b.close)
+		close(b.close)
+	})
+}
+
+func (s *Subscriber[T]) Pop() (T, bool) {
+	return s.bus.pop()
+}
+
+func (s *Subscriber[T]) Dequeue() ([]T, bool) {
+	return s.bus.dequeue()
 }
 
 func (b *Bus[T]) Subscribe() *Subscriber[T] {
@@ -63,7 +85,11 @@ func (b *Bus[T]) Subscribe() *Subscriber[T] {
 	b.subscribers[id] = notify
 	b.counter++
 
-	return &Subscriber[T]{b, id, notify}
+	return &Subscriber[T]{
+		bus:    b,
+		id:     id,
+		notify: notify,
+	}
 }
 
 func (b *Bus[T]) Push(msg T) {
@@ -79,7 +105,7 @@ func (b *Bus[T]) Push(msg T) {
 	}
 }
 
-func (b *Bus[T]) Pop() (T, bool) {
+func (b *Bus[T]) pop() (T, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -101,7 +127,7 @@ func (b *Bus[T]) Enqueue(data []T) {
 	}
 }
 
-func (b *Bus[T]) Dequeue() ([]T, bool) {
+func (b *Bus[T]) dequeue() ([]T, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

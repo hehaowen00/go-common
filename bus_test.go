@@ -13,14 +13,14 @@ func TestBus1(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	go func(sub *Subscriber[int]) {
+	go func(s *Subscriber[int]) {
 		for {
 			select {
-			case <-sub.Closed():
+			case <-s.Closed():
 				wg.Done()
 				return
-			case <-sub.Notify:
-				m, ok := bus.Dequeue()
+			case <-s.Notify():
+				m, ok := s.Dequeue()
 				if ok {
 					for _, v := range m {
 						fmt.Println("recv", v)
@@ -51,12 +51,12 @@ func TestBus2(t *testing.T) {
 			case <-s.Closed():
 				wg.Done()
 				return
-			case <-s.Notify:
-				m, ok := bus.Pop()
+			case <-s.Notify():
+				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv1", m)
 					time.Sleep(1 * time.Second)
-					m, ok = bus.Pop()
+					m, ok = s.Pop()
 				}
 			}
 		}
@@ -68,12 +68,12 @@ func TestBus2(t *testing.T) {
 			case <-s.Closed():
 				wg.Done()
 				return
-			case <-s.Notify:
-				m, ok := bus.Pop()
+			case <-s.Notify():
+				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv2", m)
 					time.Sleep(1 * time.Second)
-					m, ok = bus.Pop()
+					m, ok = s.Pop()
 				}
 			}
 		}
@@ -100,12 +100,12 @@ func TestBus3(t *testing.T) {
 			case <-s.Closed():
 				wg.Done()
 				return
-			case <-s.Notify:
-				m, ok := bus.Pop()
+			case <-s.Notify():
+				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv1", m)
 					time.Sleep(1 * time.Second)
-					m, ok = bus.Pop()
+					m, ok = s.Pop()
 				}
 			}
 		}
@@ -117,12 +117,12 @@ func TestBus3(t *testing.T) {
 			case <-s.Closed():
 				wg.Done()
 				return
-			case <-s.Notify:
-				m, ok := bus.Pop()
+			case <-s.Notify():
+				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv2", m)
 					time.Sleep(1 * time.Second)
-					m, ok = bus.Pop()
+					m, ok = s.Pop()
 				}
 			}
 		}
@@ -145,14 +145,14 @@ func TestBus4(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	go func(sub *Subscriber[int]) {
+	go func(s *Subscriber[int]) {
 		for {
 			select {
-			case <-sub.Closed():
+			case <-s.Closed():
 				wg.Done()
 				return
-			case <-sub.Notify:
-				m, ok := bus.Dequeue()
+			case <-s.Notify():
+				m, ok := s.Dequeue()
 				if ok {
 					for _, v := range m {
 						fmt.Println("recv", v)
@@ -188,14 +188,14 @@ func TestBus5(t *testing.T) {
 		wg.Done()
 	}()
 
-	go func(sub *Subscriber[int]) {
+	go func(s *Subscriber[int]) {
 		for {
 			select {
-			case <-sub.Closed():
+			case <-s.Closed():
 				wg.Done()
 				return
-			case <-sub.Notify:
-				m, ok := bus.Dequeue()
+			case <-s.Notify():
+				m, ok := s.Dequeue()
 				if ok {
 					for _, v := range m {
 						fmt.Println("recv", v)
