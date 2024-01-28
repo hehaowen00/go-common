@@ -92,8 +92,9 @@ type Subscriber[T any] struct {
 	buf       *ring.Ring[T]
 	close     chan struct{}
 	notify    chan struct{}
-	mu        sync.Mutex
-	once      sync.Once
+
+	mu   sync.Mutex
+	once sync.Once
 }
 
 func (s *Subscriber[T]) Closed() <-chan struct{} {
@@ -123,12 +124,21 @@ func (s *Subscriber[T]) Pop() (T, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.buf == nil {
+		var tmp T
+		return tmp, false
+	}
+
 	return s.buf.Pop()
 }
 
 func (s *Subscriber[T]) Dequeue() []T {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.buf == nil {
+		return nil
+	}
 
 	return s.buf.Dequeue()
 }

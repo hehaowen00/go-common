@@ -35,6 +35,7 @@ func (c *Channel[T]) Close() {
 		}
 
 		c.buf.Clear()
+		c.buf = nil
 		close(c.close)
 	})
 }
@@ -63,6 +64,10 @@ func (c *Channel[T]) Push(msg T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.buf == nil {
+		return
+	}
+
 	c.buf.Push(msg)
 
 	for _, sub := range c.subscribers {
@@ -76,12 +81,21 @@ func (c *Channel[T]) pop() (T, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.buf == nil {
+		var tmp T
+		return tmp, false
+	}
+
 	return c.buf.Pop()
 }
 
 func (c *Channel[T]) Enqueue(data []T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.buf == nil {
+		return
+	}
 
 	for _, v := range data {
 		c.buf.Push(v)
@@ -97,6 +111,10 @@ func (c *Channel[T]) Enqueue(data []T) {
 func (c *Channel[T]) dequeue() []T {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.buf == nil {
+		return nil
+	}
 
 	return c.buf.Dequeue()
 }
@@ -130,9 +148,18 @@ func (s *Subscriber[T]) Unsubscribe() {
 }
 
 func (s *Subscriber[T]) Pop() (T, bool) {
+	if s.channel == nil {
+		var tmp T
+		return tmp, false
+	}
+
 	return s.channel.pop()
 }
 
 func (s *Subscriber[T]) Dequeue() []T {
+	if s.channel == nil {
+		return nil
+	}
+
 	return s.channel.dequeue()
 }
