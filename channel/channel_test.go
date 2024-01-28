@@ -23,7 +23,7 @@ func TestChannel1(t *testing.T) {
 				for _, v := range s.Dequeue() {
 					fmt.Println("recv", v)
 				}
-				time.Sleep(1 * time.Second)
+				time.Sleep(500 * time.Millisecond)
 			}
 		}
 	}(channel.Subscribe())
@@ -52,7 +52,7 @@ func TestChannel2(t *testing.T) {
 				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv1", m)
-					time.Sleep(1 * time.Second)
+					time.Sleep(500 * time.Millisecond)
 					m, ok = s.Pop()
 				}
 			}
@@ -69,7 +69,7 @@ func TestChannel2(t *testing.T) {
 				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv2", m)
-					time.Sleep(1 * time.Second)
+					time.Sleep(500 * time.Millisecond)
 					m, ok = s.Pop()
 				}
 			}
@@ -80,7 +80,7 @@ func TestChannel2(t *testing.T) {
 		channel.Push(i)
 	}
 
-	time.Sleep(6 * time.Second)
+	time.Sleep(3 * time.Second)
 	channel.Close()
 	wg.Wait()
 }
@@ -101,7 +101,7 @@ func TestChannel3(t *testing.T) {
 				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv1", m)
-					time.Sleep(1 * time.Second)
+					time.Sleep(500 * time.Millisecond)
 					m, ok = s.Pop()
 				}
 			}
@@ -118,7 +118,7 @@ func TestChannel3(t *testing.T) {
 				m, ok := s.Pop()
 				for ok {
 					fmt.Println("recv2", m)
-					time.Sleep(1 * time.Second)
+					time.Sleep(500 * time.Millisecond)
 					m, ok = s.Pop()
 				}
 			}
@@ -128,7 +128,7 @@ func TestChannel3(t *testing.T) {
 	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	channel.Enqueue(data)
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	channel.Close()
 	wg.Wait()
 }
