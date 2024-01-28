@@ -97,9 +97,7 @@ func (c *Channel[T]) Enqueue(data []T) {
 		return
 	}
 
-	for _, v := range data {
-		c.buf.Push(v)
-	}
+	c.buf.Enqueue(data)
 
 	for _, sub := range c.subscribers {
 		if len(sub) == 0 {

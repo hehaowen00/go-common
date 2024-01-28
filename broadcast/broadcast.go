@@ -74,11 +74,7 @@ func (b *Broadcast[T]) Enqueue(data []T) {
 
 	for _, s := range b.subscribers {
 		s.mu.Lock()
-
-		for _, v := range data {
-			s.buf.Push(v)
-		}
-
+		s.buf.Enqueue(data)
 		s.mu.Unlock()
 
 		if len(s.notify) == 0 {

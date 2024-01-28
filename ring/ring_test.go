@@ -1,6 +1,7 @@
 package ring
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -37,34 +38,6 @@ func TestRing2(t *testing.T) {
 		if data[i] != i {
 			t.FailNow()
 		}
-	}
-}
-
-func BenchmarkRing1(b *testing.B) {
-	b.StopTimer()
-
-	r := NewRing[int]()
-
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		r.Push(i)
-	}
-}
-
-func BenchmarkRing2(b *testing.B) {
-	b.StopTimer()
-
-	r := NewRing[int]()
-
-	for i := 0; i < b.N; i++ {
-		r.Push(i)
-	}
-
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		r.Pop()
 	}
 }
 
@@ -110,6 +83,50 @@ func TestRing3(t *testing.T) {
 		if data[i] != expected[i] {
 			t.Fail()
 		}
+	}
+}
+
+func TestRing4(t *testing.T) {
+	r := NewRing[int]()
+
+	for i := 0; i < 10; i++ {
+		r.Push(i)
+	}
+
+	var data []int
+	for i := 0; i < 10; i++ {
+		data = append(data, i)
+	}
+	r.Enqueue(data)
+
+	fmt.Println(r)
+}
+
+func BenchmarkRing1(b *testing.B) {
+	b.StopTimer()
+
+	r := NewRing[int]()
+
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		r.Push(i)
+	}
+}
+
+func BenchmarkRing2(b *testing.B) {
+	b.StopTimer()
+
+	r := NewRing[int]()
+
+	for i := 0; i < b.N; i++ {
+		r.Push(i)
+	}
+
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		r.Pop()
 	}
 }
 

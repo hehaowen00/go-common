@@ -41,6 +41,20 @@ func (r *Ring[T]) Push(item T) {
 	r.len++
 }
 
+func (r *Ring[T]) Enqueue(data []T) {
+	if r.cap-r.len < len(data) {
+		v := r.cap + len(data)
+		r.resize(pow2(int64(v)))
+	}
+
+	for _, v := range data {
+		r.data[r.tail] = v
+		r.tail++
+	}
+
+	r.len += len(data)
+}
+
 func (r *Ring[T]) Pop() (T, bool) {
 	var tmp T
 
@@ -91,5 +105,17 @@ func (r *Ring[T]) resize(cap int) {
 	r.head = 0
 	r.tail = count
 	r.data = newData
-	r.cap *= 2
+	r.cap = cap
+}
+
+func pow2(v int64) int {
+	v--
+	v |= v >> 1
+	v |= v >> 2
+	v |= v >> 4
+	v |= v >> 8
+	v |= v >> 16
+	v |= v >> 32
+	v++
+	return int(v)
 }
