@@ -1,12 +1,14 @@
-package ring
+package ring_test
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/hehaowen00/go-common/ring"
 )
 
 func TestRing1(t *testing.T) {
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	for i := 0; i < 10; i++ {
 		r.Push(i)
@@ -26,7 +28,7 @@ func TestRing1(t *testing.T) {
 }
 
 func TestRing2(t *testing.T) {
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	for i := 0; i < 10; i++ {
 		r.Push(i)
@@ -42,7 +44,7 @@ func TestRing2(t *testing.T) {
 }
 
 func TestRing3(t *testing.T) {
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	for i := 0; i < 10; i++ {
 		r.Push(i)
@@ -87,7 +89,7 @@ func TestRing3(t *testing.T) {
 }
 
 func TestRing4(t *testing.T) {
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	for i := 0; i < 10; i++ {
 		r.Push(i)
@@ -105,7 +107,7 @@ func TestRing4(t *testing.T) {
 func BenchmarkRing1(b *testing.B) {
 	b.StopTimer()
 
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	b.StartTimer()
 
@@ -117,7 +119,7 @@ func BenchmarkRing1(b *testing.B) {
 func BenchmarkRing2(b *testing.B) {
 	b.StopTimer()
 
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	for i := 0; i < b.N; i++ {
 		r.Push(i)
@@ -133,7 +135,7 @@ func BenchmarkRing2(b *testing.B) {
 func BenchmarkRing3(b *testing.B) {
 	b.StopTimer()
 
-	r := NewRing[int]()
+	r := ring.NewRing[int]()
 
 	for i := 0; i < b.N; i++ {
 		r.Push(i)

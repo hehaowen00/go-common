@@ -1,19 +1,21 @@
-package broadcast
+package broadcast_test
 
 import (
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hehaowen00/go-common/broadcast"
 )
 
 func TestBroadcast1(t *testing.T) {
-	broadcast := NewBroadcast[int]()
+	bc := broadcast.NewBroadcast[int]()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	go func(s *Subscriber[int]) {
+	go func(s *broadcast.Subscriber[int]) {
 		for {
 			select {
 			case <-s.Closed():
@@ -26,23 +28,23 @@ func TestBroadcast1(t *testing.T) {
 				time.Sleep(500 * time.Millisecond)
 			}
 		}
-	}(broadcast.Subscribe())
+	}(bc.Subscribe())
 
 	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	broadcast.Enqueue(data)
+	bc.Enqueue(data)
 
 	time.Sleep(time.Second)
-	broadcast.Close()
+	bc.Close()
 	wg.Wait()
 }
 
 func TestBroadcast2(t *testing.T) {
-	broadcast := NewBroadcast[int]()
+	br := broadcast.NewBroadcast[int]()
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	go func(s *Subscriber[int]) {
+	go func(s *broadcast.Subscriber[int]) {
 		for {
 			select {
 			case <-s.Closed():
@@ -57,9 +59,9 @@ func TestBroadcast2(t *testing.T) {
 				}
 			}
 		}
-	}(broadcast.Subscribe())
+	}(br.Subscribe())
 
-	go func(s *Subscriber[int]) {
+	go func(s *broadcast.Subscriber[int]) {
 		for {
 			select {
 			case <-s.Closed():
@@ -74,12 +76,12 @@ func TestBroadcast2(t *testing.T) {
 				}
 			}
 		}
-	}(broadcast.Subscribe())
+	}(br.Subscribe())
 
 	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	broadcast.Enqueue(data)
+	br.Enqueue(data)
 
 	time.Sleep(5 * time.Second)
-	broadcast.Close()
+	br.Close()
 	wg.Wait()
 }

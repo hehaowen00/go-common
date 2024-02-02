@@ -16,7 +16,7 @@ func NewRing[T any]() *Ring[T] {
 }
 
 func (r *Ring[T]) Len() int {
-	return len(r.data)
+	return r.len
 }
 
 func (r *Ring[T]) Clear() {
@@ -63,7 +63,6 @@ func (r *Ring[T]) Pop() (T, bool) {
 	}
 
 	res := r.data[r.head]
-	r.data[r.head] = tmp
 	r.head = (r.head + 1) % len(r.data)
 	r.len--
 

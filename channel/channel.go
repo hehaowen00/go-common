@@ -12,30 +12,32 @@ type Channel[T any] struct {
 	close       chan struct{}
 	subscribers map[int]chan struct{}
 
-	mu   sync.Mutex
+	mu   *sync.Mutex
 	once sync.Once
 }
 
 func NewChannel[T any]() *Channel[T] {
+	mu := &sync.Mutex{}
+
 	return &Channel[T]{
 		buf:         ring.NewRing[T](),
 		close:       make(chan struct{}),
 		subscribers: make(map[int]chan struct{}),
+		mu:          mu,
 	}
 }
 
 func (c *Channel[T]) Close() {
 	c.once.Do(func() {
 		c.mu.Lock()
-		defer c.mu.Unlock()
 
 		for id, sub := range c.subscribers {
 			close(sub)
 			delete(c.subscribers, id)
 		}
 
-		c.buf.Clear()
-		c.buf = nil
+		c.mu.Unlock()
+
 		close(c.close)
 	})
 }
@@ -62,13 +64,15 @@ func (c *Channel[T]) Subscribe() *Subscriber[T] {
 
 func (c *Channel[T]) Push(msg T) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if c.buf == nil {
+		c.mu.Unlock()
 		return
 	}
 
 	c.buf.Push(msg)
+
+	c.mu.Unlock()
 
 	for _, sub := range c.subscribers {
 		if len(sub) == 0 {
@@ -79,21 +83,24 @@ func (c *Channel[T]) Push(msg T) {
 
 func (c *Channel[T]) pop() (T, bool) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if c.buf == nil {
 		var tmp T
+		c.mu.Unlock()
 		return tmp, false
 	}
 
-	return c.buf.Pop()
+	v, ok := c.buf.Pop()
+	c.mu.Unlock()
+
+	return v, ok
 }
 
 func (c *Channel[T]) Enqueue(data []T) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if c.buf == nil {
+		c.mu.Unlock()
 		return
 	}
 
@@ -104,17 +111,22 @@ func (c *Channel[T]) Enqueue(data []T) {
 			sub <- struct{}{}
 		}
 	}
+
+	c.mu.Unlock()
 }
 
 func (c *Channel[T]) dequeue() []T {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if c.buf == nil {
+		c.mu.Unlock()
 		return nil
 	}
 
-	return c.buf.Dequeue()
+	v := c.buf.Dequeue()
+	c.mu.Unlock()
+
+	return v
 }
 
 type Subscriber[T any] struct {
@@ -135,22 +147,18 @@ func (s *Subscriber[T]) Notify() <-chan struct{} {
 func (s *Subscriber[T]) Unsubscribe() {
 	s.once.Do(func() {
 		s.channel.mu.Lock()
-		defer s.channel.mu.Unlock()
 
 		close(s.channel.subscribers[s.id])
 		delete(s.channel.subscribers, s.id)
 
 		s.channel = nil
 		s.notify = nil
+
+		s.channel.mu.Unlock()
 	})
 }
 
 func (s *Subscriber[T]) Pop() (T, bool) {
-	if s.channel == nil {
-		var tmp T
-		return tmp, false
-	}
-
 	return s.channel.pop()
 }
 

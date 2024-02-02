@@ -1,12 +1,14 @@
-package arraymap
+package arraymap_test
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/hehaowen00/go-common/arraymap"
 )
 
 func TestArrayMap1(t *testing.T) {
-	table := NewArrayMap[int, string]()
+	table := arraymap.NewArrayMap[int, string]()
 
 	for i := 0; i < 1000; i++ {
 		table.Set(i, fmt.Sprintf("%d", i))
@@ -27,7 +29,7 @@ func TestArrayMap1(t *testing.T) {
 func BenchmarkArrayMap1(b *testing.B) {
 	b.StopTimer()
 
-	table := NewArrayMap[int, string]()
+	table := arraymap.NewArrayMap[int, string]()
 
 	b.StartTimer()
 

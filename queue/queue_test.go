@@ -1,22 +1,24 @@
-package queue
+package queue_test
 
 import (
 	"testing"
+
+	"github.com/hehaowen00/go-common/queue"
 )
 
 func TestQueue1(t *testing.T) {
-	queue := NewQueue[int]()
+	q := queue.NewQueue[int]()
 
 	for i := 0; i < 10; i++ {
-		queue.Enqueue(i)
+		q.Enqueue(i)
 	}
 
-	if queue.Len() != 10 {
+	if q.Len() != 10 {
 		t.FailNow()
 	}
 
 	for i := 0; i < 10; i++ {
-		v, ok := queue.Dequeue()
+		v, ok := q.Dequeue()
 		if !ok {
 			t.FailNow()
 		} else if v != i {
@@ -25,10 +27,10 @@ func TestQueue1(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		queue.Enqueue(i)
+		q.Enqueue(i)
 	}
 
-	if queue.Len() != 10 {
+	if q.Len() != 10 {
 		t.FailNow()
 	}
 }
@@ -36,47 +38,47 @@ func TestQueue1(t *testing.T) {
 func BenchmarkQueue1(b *testing.B) {
 	b.StopTimer()
 
-	queue := NewQueue[int]()
+	q := queue.NewQueue[int]()
 
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		queue.Enqueue(i)
+		q.Enqueue(i)
 	}
 }
 
 func BenchmarkQueue2(b *testing.B) {
 	b.StopTimer()
 
-	queue := NewQueue[int]()
+	q := queue.NewQueue[int]()
 
 	for i := 0; i < b.N; i++ {
-		queue.Enqueue(i)
+		q.Enqueue(i)
 	}
 
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		queue.Dequeue()
+		q.Dequeue()
 	}
 }
 
 func BenchmarkQueue3(b *testing.B) {
 	b.StopTimer()
 
-	queue := NewQueue[int]()
+	q := queue.NewQueue[int]()
 
 	for i := 0; i < b.N; i++ {
-		queue.Enqueue(i)
+		q.Enqueue(i)
 	}
 
 	for i := 0; i < b.N; i++ {
-		queue.Dequeue()
+		q.Dequeue()
 	}
 
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		queue.Enqueue(i)
+		q.Enqueue(i)
 	}
 }
