@@ -1,15 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
 	"github.com/hehaowen00/go-common/actor"
 )
 
-type TestActor struct {
-	data []int
-	sync.Mutex
+type Test struct {
 }
 
 var system = actor.NewSystem(
@@ -24,39 +23,60 @@ var system = actor.NewSystem(
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 	&actor.Config{
+		Name:          "panic2",
+		Actor:         panicActor,
+		RestartPolicy: actor.RestartPolicyNever,
+	},
+	&actor.Config{
 		Name:          "multi",
-		Actor:         multiActor,
+		Actor:         processActor,
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 )
 
 var testActor = actor.NewActor(
 	0,
-	func(state *actor.State, msg *actor.Message) error {
+	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
 		s, _ := actor.GetState[int](state)
 
-		val, ok := actor.GetMessage[int](msg)
-		if !ok {
-			panic("invalid message")
+		val, err := actor.GetMessage[int](msg)
+		if err != nil {
+			panic(fmt.Errorf("invalid message %v", err))
 		}
 
 		*s = *s + (val * 2)
 
-		msg.Reply <- *s
+		sys.ReplyTo(msg.Sender, actor.NewReply[int]("system", *s))
 
 		return nil
 	})
 
 var panicActor = actor.NewActor(
 	0,
-	func(state *actor.State, msg *actor.Message) error {
-		panic("panic")
+	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
+		s, ok := actor.GetState[int](state)
+		if !ok {
+			return fmt.Errorf("invalid state")
+		}
+
+		if *s < 5 {
+			*s++
+			panic("panic")
+		}
+
+		log.Println("actor ok")
+
 		return nil
 	})
 
-var multiActor = actor.NewMultiProcess(
+type TestActor struct {
+	data []int
+	sync.Mutex
+}
+
+var processActor = actor.NewScalar(
 	TestActor{},
-	func(state *actor.State, msg *actor.Message) error {
+	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
 		s, ok := actor.GetState[TestActor](state)
 		if !ok {
 			panic("invalid state")
@@ -65,14 +85,18 @@ var multiActor = actor.NewMultiProcess(
 		s.Lock()
 		defer s.Unlock()
 
-		val, ok := actor.GetMessage[int](msg)
-		if !ok {
-			panic("invalid message")
+		val, err := actor.GetMessage[int](msg)
+		if err != nil {
+			panic(fmt.Errorf("invalid message %v", err))
 		}
 
-		s.data = append(s.data, val)
+		single := actor.NewMessageWithReply(sys.Name(), val)
+		sys.Send("test", single)
 
-		log.Println("data", s.data)
+		reply, err := actor.GetReply[int](sys.Reply())
+		log.Println("reply:", reply, err)
+
+		s.data = append(s.data, val)
 
 		return nil
 	}, 4)
@@ -80,18 +104,24 @@ var multiActor = actor.NewMultiProcess(
 func main() {
 	system.Start()
 
+	m := system.Context()
+
 	conn1, ok := system.GetConn("test")
 	if !ok {
 		panic("invalid conn")
 	}
 
-	msg, reply := actor.NewMessageWithReply(1)
+	msg := actor.NewMessageWithReply(m.Name(), 1)
 	conn1.Send(msg)
-	log.Println(<-reply)
 
-	msg, reply = actor.NewMessageWithReply(2)
+	reply, err := actor.GetReply[int](m.Reply())
+	log.Println("reply:", reply, err)
+
+	msg = actor.NewMessageWithReply(m.Name(), 2)
 	conn1.Send(msg)
-	log.Println(<-reply)
+
+	reply, err = actor.GetReply[int](m.Reply())
+	log.Println("reply:", reply, err)
 
 	conn2, ok := system.GetConn("panic")
 	if !ok {
@@ -108,7 +138,7 @@ func main() {
 		conn3.Send(msg)
 	}
 
-	msg = actor.NewMessage(nil)
+	msg = actor.NewMessage[Test](Test{})
 	conn2.Send(msg)
 
 	system.Wait()

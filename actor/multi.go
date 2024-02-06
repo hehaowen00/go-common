@@ -5,16 +5,17 @@ import (
 	"sync"
 )
 
-type MultiProcess struct {
+type Scalar struct {
 	count  int
 	queue  chan interface{}
 	state  *State
 	handle Handle
 	wg     sync.WaitGroup
+	once   sync.Once
 }
 
-func NewMultiProcess[T any](state T, handle Handle, count int) *MultiProcess {
-	return &MultiProcess{
+func NewScalar[T any](state T, handle Handle, count int) *Scalar {
+	return &Scalar{
 		state: &State{
 			state: &state,
 		},
@@ -24,22 +25,29 @@ func NewMultiProcess[T any](state T, handle Handle, count int) *MultiProcess {
 	}
 }
 
-func (a *MultiProcess) Handle(s *supervisor, message interface{}) error {
-	return a.handle(a.state, message.(*Message))
+func (a *Scalar) Handle(s *supervisor, message interface{}) error {
+	return a.handle(nil, a.state, message.(*Message))
 }
 
-func (a *MultiProcess) Run(s *supervisor) {
+func (a *Scalar) Run(s *supervisor) {
 	name := s.name
 
 	for i := 0; i < a.count; i++ {
 		log.Printf("actor start: %s:%d\n", name, i)
 		a.wg.Add(1)
+
 		var req *Message
+
+		sys := &MessageContext{
+			name:   name,
+			system: s.sys,
+		}
 
 		go func(id int) {
 			defer func() {
 				a.wg.Done()
 				if r := recover(); r != nil {
+					req.errors = append(req.errors, r)
 					s.panic(id, req)
 				}
 			}()
@@ -55,7 +63,7 @@ func (a *MultiProcess) Run(s *supervisor) {
 					switch msg.(type) {
 					case *Message:
 						req = msg.(*Message)
-						a.handle(a.state, req)
+						a.handle(sys, a.state, req)
 						req.Attempts++
 					default:
 						panic("invalid message")
@@ -68,11 +76,13 @@ func (a *MultiProcess) Run(s *supervisor) {
 	}
 }
 
-func (a *MultiProcess) Send(message *Message) {
+func (a *Scalar) Send(message *Message) {
 	a.queue <- message
 }
 
-func (a *MultiProcess) Stop() {
-	close(a.queue)
+func (a *Scalar) Stop() {
+	a.once.Do(func() {
+		close(a.queue)
+	})
 	a.wg.Wait()
 }

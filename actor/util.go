@@ -1,8 +1,23 @@
 package actor
 
-func GetMessage[T any](m *Message) (T, bool) {
-	v, ok := m.Data.(T)
-	return v, ok
+import (
+	"bytes"
+	"encoding/gob"
+)
+
+func GetMessage[T any](m *Message) (T, error) {
+	buf := bytes.NewBuffer(m.Data)
+
+	dec := gob.NewDecoder(buf)
+
+	var v T
+
+	err := dec.Decode(&v)
+	if err != nil {
+		return v, err
+	}
+
+	return v, err
 }
 
 func GetState[T any](s *State) (*T, bool) {
