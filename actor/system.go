@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 )
 
@@ -25,13 +24,11 @@ func NewSystem(configs ...*Config) *System {
 			name:          config.Name,
 			restartPolicy: config.RestartPolicy,
 			actor:         config.Actor,
-			replies:       make(chan *Reply, 1000),
 		}
 	}
 
 	sys.registry["system"] = &supervisor{
-		name:    "system",
-		replies: make(chan *Reply, 1000),
+		name: "system",
 	}
 
 	return sys
@@ -50,21 +47,9 @@ func (m *MessageContext) Send(dest string, message *Message) {
 	m.system.registry[dest].actor.Send(message)
 }
 
-func (m *MessageContext) ReplyTo(dest string, reply *Reply) {
-	reply.receiver = dest
-	dest = strings.Split(dest, ":")[0]
-	for _, super := range m.system.registry {
-		if super.name == dest {
-			super.replies <- reply
-			return
-		}
-	}
-	m.system.registry[dest].replies <- reply
-}
-
-func (m *MessageContext) Reply() *Reply {
-	dest := strings.Split(m.name, ":")[0]
-	return <-m.system.registry[dest].replies
+func (m *MessageContext) Info(format string, v ...interface{}) {
+	v = append([]interface{}{m.name}, v...)
+	log.Printf("[info] [actor:%s] "+format, v...)
 }
 
 func (c *System) Context() *MessageContext {
@@ -93,7 +78,7 @@ func (c *System) Start() {
 		go super.actor.Run(super)
 	}
 
-	log.Println("application started")
+	log.Println("[info] [system] application started")
 }
 
 func (c *System) Stop() {
@@ -101,6 +86,7 @@ func (c *System) Stop() {
 		if super.name == "system" {
 			continue
 		}
+
 		super.actor.Stop()
 		super.wg.Wait()
 	}
@@ -112,14 +98,14 @@ func (c *System) GetConn(name string) (IActor, bool) {
 }
 
 func (c *System) Wait() {
-	log.Println("waiting for interrupt")
+	log.Println("[info] [system] waiting for interrupt")
 
-	sig := make(chan os.Signal)
+	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	<-sig
 
 	fmt.Print("\r")
-	log.Println("application stopped")
+	log.Println("[info] [system] application stopped")
 
 	for _, super := range c.registry {
 		if super.name == "system" {

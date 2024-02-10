@@ -24,13 +24,6 @@ type Config struct {
 	Retries       int
 }
 
-func NewConfig(actor IActor, restartPolicy int) *Config {
-	return &Config{
-		Actor:         actor,
-		RestartPolicy: restartPolicy,
-	}
-}
-
 func NewActor[S any](state S, handle Handle) *Actor {
 	return &Actor{
 		state: &State{
@@ -45,23 +38,19 @@ func (a *Actor) Send(message *Message) {
 	a.queue <- message
 }
 
-func (a *Actor) Handle(s *supervisor, message interface{}) error {
-	return a.handle(nil, a.state, message.(*Message))
-}
-
 func (a *Actor) Run(s *supervisor) {
 	s.wg.Add(1)
 	name := s.name
 	s.status = StatusAlive
 
-	log.Printf("actor start: %s\n", name)
+	log.Printf("[info] [actor:%s] start\n", name)
 
 	var req *Message
 
 	defer func() {
 		s.wg.Done()
 		if r := recover(); r != nil {
-			req.errors = append(req.errors, r)
+			req.error = r
 			s.panic(0, req)
 		}
 	}()
@@ -75,7 +64,7 @@ func (a *Actor) Run(s *supervisor) {
 		select {
 		case msg, ok := <-a.queue:
 			if !ok {
-				log.Println("actor terminated:", name)
+				log.Printf("[info] [actor:%s] terminated\n", name)
 				return
 			}
 
@@ -85,7 +74,7 @@ func (a *Actor) Run(s *supervisor) {
 				req.Attempts++
 				err := a.handle(sys, a.state, msg.(*Message))
 				if err != nil {
-					log.Println("actor error:", name, err)
+					log.Println("[info] [system] actor error:", name, err)
 				}
 			default:
 				panic("invalid message")
@@ -102,36 +91,46 @@ func (a *Actor) Stop() {
 	})
 }
 
-type Context struct {
-}
-
 type Reply struct {
-	receiver string
-	data     []byte
-}
-
-func (r *Reply) Receiver() string {
-	return r.receiver
+	data []byte
+	err  error
 }
 
 func (r *Reply) Data() []byte {
 	return r.data
 }
 
-func NewReply[T any](receiver string, data T) *Reply {
+func NewReply[T any](data T) (*Reply, error) {
 	buf := bytes.Buffer{}
 
 	enc := gob.NewEncoder(&buf)
 
-	enc.Encode(data)
+	err := enc.Encode(data)
+	if err != nil {
+		return nil, err
+	}
 
+	reply := &Reply{
+		data: buf.Bytes(),
+	}
+
+	return reply, nil
+}
+
+func NewReplyWithError(err error) *Reply {
 	return &Reply{
-		receiver: receiver,
-		data:     buf.Bytes(),
+		err: err,
 	}
 }
 
-func GetReply[T any](r *Reply) (T, error) {
+func GetReply[T any](resp *Resp) (T, error) {
+	r := resp.resp()
+
+	if r.err != nil {
+		var tmp T
+		return tmp, r.err
+	}
+
 	if r == nil {
 		var temp T
 		return temp, fmt.Errorf("reply is nil")

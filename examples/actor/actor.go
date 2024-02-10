@@ -20,12 +20,12 @@ var system = actor.NewSystem(
 	&actor.Config{
 		Name:          "panic",
 		Actor:         panicActor,
-		RestartPolicy: actor.RestartPolicyAlways,
+		RestartPolicy: actor.RestartPolicyNever,
 	},
 	&actor.Config{
 		Name:          "panic2",
 		Actor:         panicActor,
-		RestartPolicy: actor.RestartPolicyNever,
+		RestartPolicy: actor.RestartPolicyAlways,
 	},
 	&actor.Config{
 		Name:          "multi",
@@ -37,16 +37,20 @@ var system = actor.NewSystem(
 var testActor = actor.NewActor(
 	0,
 	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
-		s, _ := actor.GetState[int](state)
+		s, ok := actor.GetState[int](state)
+		if !ok {
+			return fmt.Errorf("invalid state")
+		}
 
 		val, err := actor.GetMessage[int](msg)
 		if err != nil {
-			panic(fmt.Errorf("invalid message %v", err))
+			return err
 		}
 
-		*s = *s + (val * 2)
+		*s = *s + val
 
-		sys.ReplyTo(msg.Sender, actor.NewReply[int]("system", *s))
+		reply, _ := actor.NewReply[int](*s)
+		msg.ReplyTo(reply)
 
 		return nil
 	})
@@ -64,7 +68,7 @@ var panicActor = actor.NewActor(
 			panic("panic")
 		}
 
-		log.Println("actor ok")
+		sys.Info("actor ok")
 
 		return nil
 	})
@@ -79,7 +83,7 @@ var processActor = actor.NewScalar(
 	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
 		s, ok := actor.GetState[TestActor](state)
 		if !ok {
-			panic("invalid state")
+			return fmt.Errorf("invalid state")
 		}
 
 		s.Lock()
@@ -87,59 +91,45 @@ var processActor = actor.NewScalar(
 
 		val, err := actor.GetMessage[int](msg)
 		if err != nil {
-			panic(fmt.Errorf("invalid message %v", err))
+			return err
 		}
 
-		single := actor.NewMessageWithReply(sys.Name(), val)
+		single := actor.NewMessage(val)
 		sys.Send("test", single)
 
-		reply, err := actor.GetReply[int](sys.Reply())
-		log.Println("reply:", reply, err)
+		reply, _ := actor.NewReply(0)
+		msg.ReplyTo(reply)
 
 		s.data = append(s.data, val)
 
 		return nil
-	}, 4)
+	}, 0)
 
 func main() {
 	system.Start()
 
-	m := system.Context()
-
-	conn1, ok := system.GetConn("test")
-	if !ok {
-		panic("invalid conn")
-	}
-
-	msg := actor.NewMessageWithReply(m.Name(), 1)
-	conn1.Send(msg)
-
-	reply, err := actor.GetReply[int](m.Reply())
-	log.Println("reply:", reply, err)
-
-	msg = actor.NewMessageWithReply(m.Name(), 2)
-	conn1.Send(msg)
-
-	reply, err = actor.GetReply[int](m.Reply())
-	log.Println("reply:", reply, err)
-
-	conn2, ok := system.GetConn("panic")
-	if !ok {
-		panic("invalid conn")
-	}
-
-	conn3, ok := system.GetConn("multi")
-	if !ok {
-		panic("invalid conn")
-	}
+	ctx := system.Context()
 
 	for i := 0; i < 10; i++ {
-		msg := actor.NewMessage(i)
-		conn3.Send(msg)
+		msg, resp, _ := actor.NewMessageWithReply(i)
+		ctx.Send("multi", msg)
+		actor.GetReply[int](resp)
 	}
 
+	msg, resp, _ := actor.NewMessageWithReply(1)
+	ctx.Send("test", msg)
+
+	reply, err := actor.GetReply[int](resp)
+	log.Println("reply:", 1, reply, err)
+
+	msg, resp, _ = actor.NewMessageWithReply(2)
+	ctx.Send("test", msg)
+
+	reply, err = actor.GetReply[int](resp)
+	log.Println("reply:", 2, reply, err)
+
 	msg = actor.NewMessage[Test](Test{})
-	conn2.Send(msg)
+	ctx.Send("panic", msg)
 
 	system.Wait()
 }
