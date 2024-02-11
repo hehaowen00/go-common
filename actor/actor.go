@@ -22,24 +22,24 @@ var (
 	ErrDidNotReply = errors.New("did not reply")
 )
 
-type IActor interface {
+type actorInterface interface {
 	Send(message *Message)
 	Run(s *supervisor)
 	Stop()
 }
 
-type State struct {
-	state interface{}
-}
+// type Handle func(*MessageContext, *State, *Message) error
 
-type Handle func(*MessageContext, *State, *Message) error
+type Handle interface {
+	Handle(*Context, *Message) error
+}
 
 type supervisor struct {
 	sys           *System
 	name          string
 	restartPolicy int
 	wg            sync.WaitGroup
-	actor         IActor
+	actor         actorInterface
 	active        int
 	mu            sync.Mutex
 	status        int

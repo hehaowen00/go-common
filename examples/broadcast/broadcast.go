@@ -9,50 +9,52 @@ import (
 var system = actor.NewSystem(
 	&actor.Config{
 		Name:          "broadcast",
-		Actor:         broadcast,
+		Actor:         actor.NewBroadcast("actor1", "actor2"),
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 	&actor.Config{
 		Name:          "actor1",
-		Actor:         actor1,
+		Actor:         actor.NewActor(&Actor1{}),
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 	&actor.Config{
 		Name:          "actor2",
-		Actor:         actor2,
+		Actor:         actor.NewActor(&Actor2{}),
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 )
 
-var broadcast = actor.NewBroadcast("actor1", "actor2")
+type Actor1 struct {
+	sum int
+}
 
-var actor1 = actor.NewActor(
-	0,
-	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
-		s, _ := actor.GetState[int](state)
+func (a *Actor1) Handle(ctx *actor.Context, msg *actor.Message) error {
+	val, err := actor.GetMessage[int](msg)
+	if err != nil {
+		return err
+	}
 
-		val, err := actor.GetMessage[int](msg)
-		if err != nil {
-			return err
-		}
+	a.sum += val
+	log.Println("actor1", a.sum)
 
-		*s = *s + val
+	return nil
+}
 
-		log.Println("actor1", *s)
+type Actor2 struct {
+	count int
+}
 
-		return nil
-	},
-)
+func (a *Actor2) Handle(ctx *actor.Context, msg *actor.Message) error {
+	_, err := actor.GetMessage[int](msg)
+	if err != nil {
+		return err
+	}
 
-var actor2 = actor.NewActor(
-	0,
-	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
-		s, _ := actor.GetState[int](state)
-		*s = *s + 1
-		log.Println("actor2", *s)
-		return nil
-	},
-)
+	a.count++
+	log.Println("actor2", a.count)
+
+	return nil
+}
 
 func main() {
 	system.Start()
@@ -60,7 +62,7 @@ func main() {
 	ctx := system.Context()
 
 	for i := 0; i < 10; i++ {
-		ctx.Send("replicated", actor.NewMessage[int](i))
+		ctx.Send("broadcast", actor.NewMessage[int](i))
 	}
 
 	system.Wait()

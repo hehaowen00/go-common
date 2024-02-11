@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"sync"
 
@@ -14,96 +13,83 @@ type Test struct {
 var system = actor.NewSystem(
 	&actor.Config{
 		Name:          "test",
-		Actor:         testActor,
+		Actor:         actor.NewActor(&Actor1{}),
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 	&actor.Config{
 		Name:          "panic",
-		Actor:         panicActor,
+		Actor:         actor.NewActor(&PanicActor{}),
 		RestartPolicy: actor.RestartPolicyNever,
 	},
 	&actor.Config{
 		Name:          "panic2",
-		Actor:         panicActor,
+		Actor:         actor.NewActor(&PanicActor{}),
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 	&actor.Config{
 		Name:          "multi",
-		Actor:         processActor,
+		Actor:         actor.NewScalar(&ScalarActor{}, 0),
 		RestartPolicy: actor.RestartPolicyAlways,
 	},
 )
 
-var testActor = actor.NewActor(
-	0,
-	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
-		s, ok := actor.GetState[int](state)
-		if !ok {
-			return fmt.Errorf("invalid state")
-		}
+type Actor1 struct {
+	data int
+}
 
-		val, err := actor.GetMessage[int](msg)
-		if err != nil {
-			return err
-		}
+func (t *Actor1) Handle(ctx *actor.Context, msg *actor.Message) error {
+	val, err := actor.GetMessage[int](msg)
+	if err != nil {
+		return err
+	}
 
-		*s = *s + val
+	t.data += val
 
-		reply, _ := actor.NewReply[int](*s)
-		msg.ReplyTo(reply)
+	reply, _ := actor.NewReply[int](t.data)
+	msg.ReplyTo(reply)
 
-		return nil
-	})
+	return nil
+}
 
-var panicActor = actor.NewActor(
-	0,
-	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
-		s, ok := actor.GetState[int](state)
-		if !ok {
-			return fmt.Errorf("invalid state")
-		}
+type PanicActor struct {
+	count int
+}
 
-		if *s < 5 {
-			*s++
-			panic("panic")
-		}
+func (p *PanicActor) Handle(ctx *actor.Context, msg *actor.Message) error {
+	if p.count < 10 {
+		p.count++
+		panic("panic")
+	}
 
-		sys.Info("actor ok")
+	ctx.Info("actor ok")
 
-		return nil
-	})
+	return nil
+}
 
-type TestActor struct {
+type ScalarActor struct {
 	data []int
 	sync.Mutex
 }
 
-var processActor = actor.NewScalar(
-	TestActor{},
-	func(sys *actor.MessageContext, state *actor.State, msg *actor.Message) error {
-		s, ok := actor.GetState[TestActor](state)
-		if !ok {
-			return fmt.Errorf("invalid state")
-		}
+func (s *ScalarActor) Handle(ctx *actor.Context, msg *actor.Message) error {
+	s.Lock()
+	defer s.Unlock()
 
-		s.Lock()
-		defer s.Unlock()
+	val, err := actor.GetMessage[int](msg)
+	if err != nil {
+		return err
+	}
 
-		val, err := actor.GetMessage[int](msg)
-		if err != nil {
-			return err
-		}
+	single := actor.NewMessage(val)
+	ctx.Send("test", single)
 
-		single := actor.NewMessage(val)
-		sys.Send("test", single)
+	reply, _ := actor.NewReply(0)
+	msg.ReplyTo(reply)
 
-		reply, _ := actor.NewReply(0)
-		msg.ReplyTo(reply)
+	s.data = append(s.data, val)
 
-		s.data = append(s.data, val)
-
-		return nil
-	}, 0)
+	return nil
+}
 
 func main() {
 	system.Start()
@@ -130,6 +116,9 @@ func main() {
 
 	msg = actor.NewMessage[Test](Test{})
 	ctx.Send("panic", msg)
+
+	msg = actor.NewMessage[Test](Test{})
+	ctx.Send("panic2", msg)
 
 	system.Wait()
 }

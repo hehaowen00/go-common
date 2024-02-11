@@ -9,17 +9,13 @@ import (
 type Scalar struct {
 	count  int
 	queue  chan interface{}
-	state  *State
 	handle Handle
 	wg     sync.WaitGroup
 	once   sync.Once
 }
 
-func NewScalar[T any](state T, handle Handle, count int) *Scalar {
+func NewScalar(handle Handle, count int) *Scalar {
 	return &Scalar{
-		state: &State{
-			state: &state,
-		},
 		queue:  make(chan interface{}, 5),
 		handle: handle,
 		count:  count,
@@ -37,7 +33,7 @@ func (a *Scalar) Run(s *supervisor) {
 			s.wg.Done()
 		}()
 
-		sys := &MessageContext{
+		ctx := &Context{
 			name:   name,
 			system: s.sys,
 		}
@@ -64,7 +60,7 @@ func (a *Scalar) Run(s *supervisor) {
 							}
 						}()
 
-						err := a.handle(sys, a.state, msg)
+						err := a.handle.Handle(ctx, msg)
 						if err != nil {
 							log.Printf("[info] [actor:%s] error: %v\n", name, err)
 						}
@@ -80,7 +76,7 @@ func (a *Scalar) Run(s *supervisor) {
 
 		var req *Message
 
-		sys := &MessageContext{
+		ctx := &Context{
 			name:   fmt.Sprintf("%s:%d", name, i),
 			system: s.sys,
 		}
@@ -106,7 +102,7 @@ func (a *Scalar) Run(s *supervisor) {
 					case *Message:
 						req = msg.(*Message)
 						req.Attempts++
-						err := a.handle(sys, a.state, req)
+						err := a.handle.Handle(ctx, req)
 						if err != nil {
 							log.Printf("[info] [actor:%s] error: %v\n", name, err)
 						}

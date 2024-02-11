@@ -9,26 +9,21 @@ import (
 )
 
 type Actor struct {
-	queue   chan interface{}
-	replies chan *Reply
-	state   *State
-	handle  Handle
-	once    sync.Once
+	queue  chan interface{}
+	handle Handle
+	once   sync.Once
 }
 
 type Config struct {
 	Name          string
-	Actor         IActor
+	Actor         actorInterface
 	Max           int
 	RestartPolicy int
 	Retries       int
 }
 
-func NewActor[S any](state S, handle Handle) *Actor {
+func NewActor(handle Handle) *Actor {
 	return &Actor{
-		state: &State{
-			state: &state,
-		},
 		queue:  make(chan interface{}, 100),
 		handle: handle,
 	}
@@ -55,7 +50,7 @@ func (a *Actor) Run(s *supervisor) {
 		}
 	}()
 
-	sys := &MessageContext{
+	sys := &Context{
 		name:   name,
 		system: s.sys,
 	}
@@ -72,7 +67,7 @@ func (a *Actor) Run(s *supervisor) {
 			case *Message:
 				req = msg.(*Message)
 				req.Attempts++
-				err := a.handle(sys, a.state, msg.(*Message))
+				err := a.handle.Handle(sys, msg.(*Message))
 				if err != nil {
 					log.Println("[info] [system] actor error:", name, err)
 				}

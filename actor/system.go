@@ -34,26 +34,26 @@ func NewSystem(configs ...*Config) *System {
 	return sys
 }
 
-type MessageContext struct {
+type Context struct {
 	name   string
 	system *System
 }
 
-func (m *MessageContext) Name() string {
+func (m *Context) Name() string {
 	return m.name
 }
 
-func (m *MessageContext) Send(dest string, message *Message) {
+func (m *Context) Send(dest string, message *Message) {
 	m.system.registry[dest].actor.Send(message)
 }
 
-func (m *MessageContext) Info(format string, v ...interface{}) {
+func (m *Context) Info(format string, v ...interface{}) {
 	v = append([]interface{}{m.name}, v...)
 	log.Printf("[info] [actor:%s] "+format, v...)
 }
 
-func (c *System) Context() *MessageContext {
-	return &MessageContext{
+func (c *System) Context() *Context {
+	return &Context{
 		name:   "system",
 		system: c,
 	}
@@ -92,7 +92,7 @@ func (c *System) Stop() {
 	}
 }
 
-func (c *System) GetConn(name string) (IActor, bool) {
+func (c *System) GetConn(name string) (actorInterface, bool) {
 	a, ok := c.registry[name]
 	return a.actor, ok
 }

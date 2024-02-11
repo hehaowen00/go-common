@@ -16,15 +16,15 @@ func NewBroadcast(actors ...string) *Broadcast {
 	return broadcast
 }
 
-func (r *Broadcast) Send(message *Message) {
-	r.queue <- message
+func (b *Broadcast) Send(message *Message) {
+	b.queue <- message
 }
 
-func (r *Broadcast) Stop() {
-	close(r.queue)
+func (b *Broadcast) Stop() {
+	close(b.queue)
 }
 
-func (r *Broadcast) Run(s *supervisor) {
+func (b *Broadcast) Run(s *supervisor) {
 	s.wg.Add(1)
 
 	log.Printf("[info] [actor:%s] start\n", s.name)
@@ -36,22 +36,22 @@ func (r *Broadcast) Run(s *supervisor) {
 		}
 	}()
 
-	sys := &MessageContext{
-		name:   "replicated",
+	ctx := &Context{
+		name:   s.name,
 		system: s.sys,
 	}
 
 	for {
 		select {
-		case msg, ok := <-r.queue:
+		case msg, ok := <-b.queue:
 			if !ok {
 				return
 			}
 
 			switch msg := msg.(type) {
 			case *Message:
-				for _, actor := range r.actors {
-					go sys.Send(actor, msg)
+				for _, actor := range b.actors {
+					go ctx.Send(actor, msg)
 				}
 			default:
 				panic("invalid message")
