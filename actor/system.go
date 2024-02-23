@@ -1,11 +1,10 @@
 package actor
 
 import (
-	"fmt"
 	"log"
-	"os"
-	"os/signal"
 	"sync"
+
+	"github.com/hehaowen00/go-common/utils"
 )
 
 type System struct {
@@ -100,11 +99,8 @@ func (c *System) GetConn(name string) (actorInterface, bool) {
 func (c *System) Wait() {
 	log.Println("[info] [system] waiting for interrupt")
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	<-sig
+	utils.WaitForInterrupt()
 
-	fmt.Print("\r")
 	log.Println("[info] [system] application stopped")
 
 	for _, super := range c.registry {
