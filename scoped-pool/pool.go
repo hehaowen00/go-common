@@ -1,4 +1,4 @@
-package scopedworkerpool
+package scopedpool
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type Handler[T any] interface {
 	Handle(*T) error
 }
 
-type Supervisor[T any] struct {
+type Pool[T any] struct {
 	handler    Handler[T]
 	bufferSize int
 	timeout    time.Duration
@@ -25,8 +25,8 @@ type Supervisor[T any] struct {
 	mu    sync.Mutex
 }
 
-func NewSupervisor[T any](handler Handler[T], bufferSize int, timeout time.Duration) *Supervisor[T] {
-	sup := Supervisor[T]{
+func NewPool[T any](handler Handler[T], bufferSize int, timeout time.Duration) *Pool[T] {
+	sup := Pool[T]{
 		handler:    handler,
 		bufferSize: bufferSize,
 		timeout:    timeout,
@@ -38,7 +38,7 @@ func NewSupervisor[T any](handler Handler[T], bufferSize int, timeout time.Durat
 	return &sup
 }
 
-func (sup *Supervisor[T]) Push(message *T) {
+func (sup *Pool[T]) Push(message *T) {
 	if message == nil {
 		return
 	}
@@ -76,14 +76,14 @@ func (sup *Supervisor[T]) Push(message *T) {
 	w.in <- message
 }
 
-func (sup *Supervisor[T]) clearWorker(id string) {
+func (sup *Pool[T]) clearWorker(id string) {
 	sup.mu.Lock()
 	defer sup.mu.Unlock()
 
 	delete(sup.workers, id)
 }
 
-func (sup *Supervisor[T]) Stop() {
+func (sup *Pool[T]) Stop() {
 	sup.once.Do(func() {
 		sup.alive.Store(false)
 		for _, w := range sup.workers {
